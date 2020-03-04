@@ -19,19 +19,14 @@ ui <- fluidPage(
       selectInput("category",
                   label="What kind of food did you want?",
                   choices = list("American","Breakfast","Chinese","Mexican"),
-                  selected="Breakfast"), 
-      sliderInput("dollars",
-                  label="What's your budget?",
-                  min=1,max=4,value=1),
+                  selected="Breakfast"),
+      checkboxGroupInput("price",label="What's your budget",
+                         choices = list("$"=1,"$$"=2,"$$$"=3,"$$$$"=4),selected=2)
+        
+      
+      
     ),
- 
-    
-    
-    
-    
-    
-   mainPanel(
-     
+mainPanel(
      
       fluidRow(
          column(3,
@@ -56,6 +51,7 @@ ui <- fluidPage(
     )
   )
 )
+
 
 # Define server logic ----
 server <- function(input, output) {
