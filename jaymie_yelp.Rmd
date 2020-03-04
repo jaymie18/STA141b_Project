@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+#DAVIS WOODLAND SAC DIXON, CATEGORIES, AND RESTAURANT LIST AND ID,
+#ADDRESS
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+#reviews
+MYID <- "I2MviWrFablKCIhePw-MjA"
+r <- GET(
+  str_c("https://api.yelp.com/v3/businesses/",MYID,"/reviews"),
+  add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY")))
+)
+stop_for_status(r)
+json <- content(r, as = "text")
+fromJSON(json)$reviews %>% select(id,text)
+```
+```
+
+```
+```{r pressure, echo=FALSE}
+r <- GET(
+  "https://api.yelp.com/v3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY"))),
+  query = list(
+    term = "restaurant,bar",
+    location = "Davis",
+    limit = 50
+  )
+)
+stop_for_status(r)
+json <- content(r, as = "text")
+
+#name of restaurant
+name_davis <- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  distinct(name) 
+
+titledavis <- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  unnest(categories) %>% distinct(title, name) #get distinct alias
+
+
+#address
+display_address_test <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate( display_address = as.character(location$display_address)) %>%
+  mutate(transactions = as.character(transactions)) %>% 
+  filter(grepl('delivery', transactions1, ignore.case = TRUE))
+  select(display_address) 
+
+#keep title
+display_address_test$display_address %>% str_remove_all("[c()]") %>% str_remove_all("[\\\"]")
+```
+```
