@@ -1,0 +1,65 @@
+---
+title: "Yelp_API"
+author: "Grant Smith"
+date: "2/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(jsonlite)
+library(httr)
+library(tidyverse)
+library(rromeo)
+library(plotly)
+```
+
+
+```{r}
+yp <- GET(
+  "https://api.yelp.com/v3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
+  query = list(
+    term="Restaurant",
+    location = "Davis, CA 95618",
+    limit=50
+    #categories="sushi,japanese"
+
+  )
+)
+stop_for_status(yp)
+json <- content(yp, as = "text",encoding="UTF-8")
+
+fromJSON(json)$business %>% select(id,name,rating)
+
+rateme<-fromJSON(json)$business %>% select(id,name,rating)
+
+rateme %>% 
+  group_by(rating) %>% 
+  plot_ly(x=~rating,type='histogram',color=~factor(rating))
+```
+
+```{r}
+rateme %>% 
+  arrange(desc(rating))
+```
+
+```{r}
+yp_rev<-GET(
+  "https://api.yelp.com/v3/businesses/iLNnJRb7zgms4flTf9qteg/reviews",
+   add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))))
+stop_for_status(yp_rev)
+
+```
+
+```{r}
+usethis::edit_r_environ()
+```
+
+```{r}
+starwars
+```
+
