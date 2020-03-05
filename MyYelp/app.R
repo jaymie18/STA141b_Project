@@ -1,37 +1,41 @@
+library(shiny)
+library(shinydashboard)
+
 
 ui <- fluidPage(
-  titlePanel("YelperHelper!"),
+  titlePanel(h2("YelperHelper!",align="center")),
+  
+  sidebarPanel( h4("Instructions",align="center"),
+                p("Select a local city, food category, and price below. Then choose the restaurant you want to look at."),
+                br(),
+                br(),
+                selectInput("cities",
+                            label="Choose a city to look in.",
+                            choices = list("Davis",
+                                           "Dixon",
+                                           "Sacramento",
+                                           "Woodland"),
+                            selected = "Davis"),
+                #this section will be pulled from cats in API
+                selectInput("category",
+                            label="What kind of food did you want?",
+                            choices = list("American","Breakfast","Chinese","Mexican"),
+                            selected="Breakfast"),
+                checkboxGroupInput("price",label="What's your budget",
+                                   choices = list("$"=1,"$$"=2,"$$$"=3,"$$$$"=4),selected=2),width = 3),
   
   mainPanel(
-    
     tabsetPanel(
       tabPanel("City Stats",
                
-               sidebarPanel( h4("Instructions"),
-                             p("Select a local city, food category, and price below. Then choose the restaurant you want to look at."),
-                             br(),
-                             br(),
-                             selectInput("cities",
-                                         label="Choose a city to look in.",
-                                         choices = list("Davis",
-                                                        "Dixon",
-                                                        "Sacramento",
-                                                        "Woodland"),
-                                         selected = "Davis"),
-                             #this section will be pulled from cats in API
-                             selectInput("category",
-                                         label="What kind of food did you want?",
-                                         choices = list("American","Breakfast","Chinese","Mexican"),
-                                         selected="Breakfast"),
-                             checkboxGroupInput("price",label="What's your budget",
-                                                choices = list("$"=1,"$$"=2,"$$$"=3,"$$$$"=4),selected=2),width = 3),
-               mainPanel(
+               
+               
                  h4("Look at me"),
                  plotOutput("hist"),
                  verbatimTextOutput("stats"),
                  verbatimTextOutput("stats2")
                  
-               )
+               
                
                
                
@@ -50,16 +54,16 @@ ui <- fluidPage(
     
     
     
-    h1("Introducing Shiny"),
-    p("Shiny is a new package from RStudio that makes it ", 
-      em("incredibly easy "), 
-      "to build interactive web applications with R."),
-    br(),
-    p("For an introduction and live examples, visit the ",
-      a("Shiny homepage.", 
-        href = "http://shiny.rstudio.com")),
+    # h1("Introducing Shiny"),
+    # p("Shiny is a new package from RStudio that makes it ", 
+    #   em("incredibly easy "), 
+    #   "to build interactive web applications with R."),
+    # br(),
+    # p("For an introduction and live examples, visit the ",
+    #   a("Shiny homepage.", 
+    #     href = "http://shiny.rstudio.com")),
     
-    width=10)
+    width=8)
 )
 
 
