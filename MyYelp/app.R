@@ -1,6 +1,11 @@
 library(shiny)
 library(shinydashboard)
 library(leaflet)
+library(jsonlite)
+library(httr)
+library(tidyverse)
+library(rromeo)
+library(plotly)
 
 ui <- fluidPage(
   titlePanel(h2("YelperHelper!",align="center")),
@@ -39,7 +44,11 @@ ui <- fluidPage(
               tableOutput("price")),
        column(4,
               h4("maps",align="center"),
-              leafletOutput("cityMap",height=500,width=400))
+              leafletOutput("cityMap",height=500,width=400)),
+       column(4,
+              h4("You chose",align="left"),
+              textOutput("selected_var")
+              )
         
               
              ),
@@ -72,15 +81,17 @@ ui <- fluidPage(
 
 
 
-# Define server logic ----
+# Define server logic ---------------------------------------------------------------------------
 server <- function(input, output) {
  
+#ctyR() <-reactive({paste(input$cities,", CA") })  
+  
   yp <- GET(
     "https://api.yelp.com/v3/businesses/search",
     add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
     query = list(
       term="Restaurant",
-      location = "Davis, CA 95618", 
+      location = paste(input$cities,", CA"), 
       limit=50
       
       
@@ -90,7 +101,7 @@ server <- function(input, output) {
   json <- content(yp, as = "text",encoding="UTF-8")
   
   #change to yp for all 4 cities and then filter based on user input//will be reactive I think
-  yp_davis<-fromJSON(json)$business %>% 
+  df<-fromJSON(json)$business %>% 
     select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
     unnest(categories) %>% 
     mutate(lat = coordinates$lat,lon = coordinates$lon) %>% 
@@ -98,30 +109,32 @@ server <- function(input, output) {
     select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
     distinct(name,.keep_all = TRUE) 
   
-               
+  output$selected_var <- renderText({ 
+    paste("You have selected", input$cities)
+  })           
 
-  
+  ###want to change to ggplot 
    output$hist <- renderPlot({
-    hist(yp_davis$rating,main="Ratings") #not the same data as below//add second arg main=isolate(input$title) makes the title variable non-reactive
+    hist(df$rating,main="Ratings") #not the same data as below//add second arg main=isolate(input$title) makes the title variable non-reactive
     
   })
   output$price <- renderTable({
-    yp_davis %>% group_by(price) %>% 
+    df %>% group_by(price) %>% 
       summarise(n()) %>%  slice(-4) 
       #not the same data as above
     
   })
   output$avgrate <-renderTable({
-    yp_davis %>% summarise(Avg=mean(rating))
+    df %>% summarise(Avg=mean(rating))
   })
   
   #output$cities <-
   
   output$cityMap <- renderLeaflet({
     
-    df<-yp_davis %>% select(name,lat,lon)
+    df.map<-df %>% select(name,lat,lon)
     
-    leaflet(df) %>% 
+    leaflet(df.map) %>% 
       addTiles() %>% 
       addMarkers() %>% 
       addTiles()
@@ -133,5 +146,5 @@ server <- function(input, output) {
 
 
 
-# Run the app ----
+# Run the app -----------------------------------------------------------------------------------
 shinyApp(ui = ui, server = server)
