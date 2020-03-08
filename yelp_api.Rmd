@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r,message=FALSE}
 library(jsonlite)
 library(httr)
 library(tidyverse)
@@ -24,16 +24,16 @@ yp <- GET(
   add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
   query = list(
     term="Restaurant",
-    location = "Davis, CA 95618",
+    location = "Davis, CA 95618", 
     limit=50
-    #categories="sushi,japanese"
+    
 
   )
 )
 stop_for_status(yp)
 json <- content(yp, as = "text",encoding="UTF-8")
 
-fromJSON(json)$business %>% select(id,name,rating)
+fromJSON(json)$business %>% select(coordinates)
 
 rateme<-fromJSON(json)$business %>% select(id,name,rating)
 
@@ -60,6 +60,22 @@ usethis::edit_r_environ()
 ```
 
 ```{r}
-starwars
+yp_davis<-fromJSON(json)$business %>% 
+ 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat,lon = coordinates$lon) %>% 
+  mutate( display_address = as.character(location$display_address),city=as.character(location$city)) %>% 
+  select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
+   distinct(name,.keep_all = TRUE) 
+  
+
+
+yp_davis %>%  distinct(name,.keep_all = TRUE)
+  
+      
+?filter
+yp_davis
 ```
+
 
