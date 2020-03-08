@@ -79,7 +79,7 @@ yp_davis
 ```
 
 ```{r}
-ipc<-"Davis"
+ipc<-"Woodland"
 ipc_glu<-str_glue(ipc,", CA")
 
 ipc_glu
@@ -96,13 +96,11 @@ stop_for_status(ypt)
 
 json2<-content(ypt,as="text",encoding = "UTF-8")
 fromJSON(json2)$business %>% mutate(address=as.character(location$display_address)) %>% 
-  select(name,address)
+  select(name,address,price) %>% group_by(price) %>% summarise(n())
 ```
 
 
 ```{r}
-mode(ipc_glu)
 
-paste(ipc,", CA")
 ```
 
