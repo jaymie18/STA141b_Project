@@ -9,4 +9,3 @@ https://shiny.rstudio.com/tutorial/
 Additionally we will be using "Yelp Fusion"
 https://www.yelp.com/fusion
 
-Jaymie is gathering data now.
