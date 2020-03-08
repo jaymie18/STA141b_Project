@@ -1,10 +1,16 @@
 ---
-title: "Untitled"
+title: ""
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(jsonlite)
+library(httr)
+library(sp)
+library(leaflet)
+library("rromeo")
+library(plyr)
 ```
 
 ## R Markdown
@@ -24,6 +30,21 @@ summary(cars)
 You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
+Sys.setenv(YELP_KEY = "ywbQDMfoCrQRRIw1_mD7Z_GrFVkSxwywezrz33Oawf6MDxUU6l3JbaoyCHfc95QJe7UpzkeIvdFTjbD4ZsUys3xhhzgGJEm2WIWgtAZ-tlm1IpvUmOuJ3vhRWzdYXnYx")
+Sys.getenv("YELP_KEY")
+check_key()
+rr_auth("ywbQDMfoCrQRRIw1_mD7Z_GrFVkSxwywezrz33Oawf6MDxUU6l3JbaoyCHfc95QJe7UpzkeIvdFTjbD4ZsUys3xhhzgGJEm2WIWgtAZ-tlm1IpvUmOuJ3vhRWzdYXnYx")
+
+yelp <- GET(
+  "https://api.yelp.com/y3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY"))),
+  query = list(
+    location = "Davis",
+    transactions = "pickup"
+  )
+)
+
+
 #reviews
 MYID <- "I2MviWrFablKCIhePw-MjA"
 r <- GET(
@@ -43,35 +64,174 @@ r <- GET(
   add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY"))),
   query = list(
     term = "restaurant,bar",
-    location = "Davis",
+    location = "Woodlands, CA",
     limit = 50
   )
 )
 stop_for_status(r)
 json <- content(r, as = "text")
 
-#name of restaurant
-name_davis <- fromJSON(json)$business %>% 
-  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
-  distinct(name) 
-
-titledavis <- fromJSON(json)$business %>% 
-  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
-  unnest(categories) %>% distinct(title, name) #get distinct alias
-
-
-#address
-display_address_test <- fromJSON(json)$business %>% 
+df_woodlands <- fromJSON(json)$business %>% 
   select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
   unnest(categories) %>% 
   mutate(lat = coordinates$lat) %>% 
   mutate(lon = coordinates$lon) %>% 
-  mutate( display_address = as.character(location$display_address)) %>%
+  mutate(city = location$city) %>% 
   mutate(transactions = as.character(transactions)) %>% 
-  filter(grepl('delivery', transactions1, ignore.case = TRUE))
-  select(display_address) 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>%
+  filter(grepl('Woodland',display_address, ignore.case = TRUE)) %>% 
+  select(id, name, image_url,title, lat,lon,rating,price,display_phone, transactions, display_address, city)
 
-#keep title
-display_address_test$display_address %>% str_remove_all("[c()]") %>% str_remove_all("[\\\"]")
+#name of restaurant
+name_woodlands <- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  distinct(name) 
+
+title_woodlands<- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  unnest(categories) %>% distinct(title) #get distinct alias
+
+
+#address
+display_address_woodlands <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate(transactions = as.character(transactions)) %>% 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>% 
+  select(id, name, image_url,title, lat,lon,rating,coordinates,price,display_phone, transactions)
+
+
+
+
+
 ```
+```
+
+````
+```{r pressure, echo=FALSE}
+r <- GET(
+  "https://api.yelp.com/v3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY"))),
+  query = list(
+    term = "restaurant,bar",
+    location = "Sacramento, CA",
+    limit = 50
+  )
+)
+stop_for_status(r)
+json <- content(r, as = "text")
+
+
+df_sac <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate(city = location$city) %>% 
+  mutate(transactions = as.character(transactions)) %>% 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>%   filter(grepl('Sacramento',display_address, ignore.case = TRUE)) %>% 
+  select(id, name, image_url,title, lat,lon,rating,price,display_phone, transactions, display_address,city)
+#name of restaurant
+name_sac <- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  distinct(name) 
+
+title_sac<- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  unnest(categories) %>% distinct(title) #get distinct alias
+
+
+#address
+display_address_sac <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate(transactions = as.character(transactions)) %>% 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>% 
+  filter(grepl('Sacramento',display_address, ignore.case = TRUE))
+
+
+
+```
+
+```{r pressure, echo=FALSE}
+r <- GET(
+  "https://api.yelp.com/v3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY"))),
+  query = list(
+    term = "restaurant,bar",
+    location = "Dixon, CA",
+    limit = 50
+  )
+)
+stop_for_status(r)
+json <- content(r, as = "text")
+
+df_dixon <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate(city = location$city) %>% 
+  mutate(transactions = as.character(transactions)) %>% 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>%
+  filter(grepl('Dixon',display_address, ignore.case = TRUE)) %>% 
+  select(id, name, image_url,title, lat,lon,rating,price,display_phone, transactions, display_address,city)
+
+title_dixon<- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  unnest(categories) %>% mutate(display_address = location$display_address %>% 
+  map_chr(str_c, collapse = "\n")) %>% filter(grepl('Dixon',display_address, ignore.case = TRUE))  %>% distinct(title) #get distinct alias
+
+#name of restaurant
+name_dixon <- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  distinct(name) 
+
+title_dixon<- fromJSON(json)$business %>% 
+  select(id, name, image_url,is_closed,url,review_count,categories,rating,coordinates,price,location,display_phone) %>% 
+  unnest(categories) %>% mutate(display_address = location$display_address %>% 
+  map_chr(str_c, collapse = "\n")) %>% filter(grepl('Dixon',display_address, ignore.case = TRUE))  %>% distinct(title) #get distinct alias
+
+
+#address
+display_address_dixon <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate(transactions = as.character(transactions)) %>% 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>% select(name,title,display_address) %>% 
+  filter(grepl('Dixon',display_address, ignore.case = TRUE)) %>% distinct(title)
+```
+
+```{r pressure, echo=FALSE}
+r <- GET(
+  "https://api.yelp.com/v3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("YELP_KEY"))),
+  query = list(
+    term = "restaurant,bar",
+    location = "Davis, CA",
+    limit = 50
+  )
+)
+stop_for_status(r)
+json <- content(r, as = "text")
+
+df_davis <- fromJSON(json)$business %>% 
+  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+  unnest(categories) %>% 
+  mutate(lat = coordinates$lat) %>% 
+  mutate(lon = coordinates$lon) %>% 
+  mutate(transactions = as.character(transactions)) %>% 
+  mutate(city = location$city) %>% 
+  mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n")) %>%
+  filter(grepl('davis',display_address, ignore.case = TRUE)) %>% 
+  select(id, name, image_url,title, lat,lon,rating,price,display_phone, transactions, display_address, city)
+
+new_df <- rbind(df_sac,df_dixon,df_woodlands, df_davis)
+
 ```
