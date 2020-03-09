@@ -64,7 +64,7 @@ ui <- fluidPage(
       tabPanel("Restaurant Stats",
                column(4,
                       h4("restaurant",align="left"),
-                      selectInput("rest",
+                      selectInput("resta",
                                   label = "Make your choice",
                                   choices=list("Mikuni's", 
                                                "Ali Baba",
@@ -150,7 +150,7 @@ server <- function(input, output,session) {
     rest() %>% summarise(Avg=mean(rating))
   })
   output$pcnt<-renderText({
-    paste("Number of restaurants for ",input$cities,  "\nby price")
+    paste("Number of restaurants for ",input$cities,  "by price")
   })
   
   
@@ -173,16 +173,17 @@ server <- function(input, output,session) {
 
 output$restMap <- renderLeaflet({
   
-  x <- input$cities
+  x = input$cities
   
-  observeEvent(updateSelectInput(session,"restaurant",
+  updateSelectInput(session,"resta",
                                  label = paste("Make your choice"),
                                  choices = unique(rest()$name),
-                                 selected = head(unique(rest()$name),1)))
+                                 #selected = head(unique(rest()$name),1)
+                                 )
   
-  df<-rest() %>% filter(name == input$rest) %>% select(name,lat,lon)
+  df<-rest() %>% filter(name == input$resta) %>% select(name,lat,lon)
   
-  leaflet() %>% 
+  leaflet(df) %>% 
     addTiles() %>% 
     addMarkers() %>% 
     addTiles()
