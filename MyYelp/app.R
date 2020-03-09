@@ -10,12 +10,13 @@ library(jsonlite)
 ui <- fluidPage(
   titlePanel(h2("Aggie YelperHelper!",align="center")),
   
-  sidebarPanel( h4("Instructions",align="center"),
-                h5("For City Stats:"),
+  sidebarPanel( h3("Instructions",align="center"),
+                strong("For City Stats:"),
                 p("Just pick a local city! The 'City' tab wil give you some quick stats."),
                 br(),
-                h5("For a specific restaurant:"),
-                p("Select a local city, food category, and price below. Then choose the restaurant you want to look at."),
+                strong("For a specific restaurant:"),
+                p("Select a local city, food category, and price below. Then choose the restaurant 
+                  you want to look at in the restaurant tab."),
                 br(),
                 br(),
                 selectInput("cities",
@@ -46,6 +47,7 @@ ui <- fluidPage(
               h4("Quick Stats",align="left"),
               textOutput("avgR"),
               tableOutput("avgrate"),
+              textOutput("pcnt"),
               tableOutput("price")),
        column(4,
               h4("maps",align="left"),
@@ -105,7 +107,7 @@ server <- function(input, output,session) {
     select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
     unnest(categories) %>% 
     mutate(lat = coordinates$lat,lon = coordinates$lon) %>% 
-    mutate( display_address = as.character(location$display_address),city=as.character(location$city)) %>% 
+    mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n"),city=as.character(location$city)) %>% 
     select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
     distinct(name,.keep_all = TRUE) })  
 
@@ -144,6 +146,9 @@ server <- function(input, output,session) {
   output$avgrate <-renderTable({
     rest() %>% summarise(Avg=mean(rating))
   })
+  output$pcnt<-renderText({
+    paste("Number of restaurants for ",input$cities,  "\nby price")
+  })
   
   
   output$cityMap <- renderLeaflet({
@@ -153,7 +158,8 @@ server <- function(input, output,session) {
     leaflet(df.map) %>% 
       addTiles() %>% 
       addMarkers(
-        popup = paste(rest()$name,"<br>",rest()$display_address)
+        popup = paste(rest()$name,"<br>"
+                      ,rest()$display_address)
       ) %>% 
       addTiles()
       
