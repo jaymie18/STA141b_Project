@@ -78,4 +78,29 @@ yp_davis %>%  distinct(name,.keep_all = TRUE)
 yp_davis
 ```
 
+```{r}
+ipc<-"Woodland"
+ipc_glu<-str_glue(ipc,", CA")
+
+ipc_glu
+
+ypt<-GET(
+  "https://api.yelp.com/v3/businesses/search",
+  add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
+  query = list(
+    term="Restaurant",
+    location = str_glue(ipc,", CA"), 
+    limit=50 
+  ))  
+stop_for_status(ypt)
+
+json2<-content(ypt,as="text",encoding = "UTF-8")
+fromJSON(json2)$business %>% mutate(address=as.character(location$display_address)) %>% 
+  select(name,address,price) %>% group_by(price) %>% summarise(n())
+```
+
+
+```{r}
+
+```
 
