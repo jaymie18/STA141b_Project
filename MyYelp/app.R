@@ -8,9 +8,12 @@ library(jsonlite)
 
 
 ui <- fluidPage(
-  titlePanel(h2("Aggie YelperHelper!",align="center")),
+  titlePanel(h2("Aggie YelperHelper!",align="center")
+             ),
   
-  sidebarPanel( h3("Instructions",align="center"),
+  sidebarPanel(img(src = "yelp_fusion.png", height = 75, width =200),
+               img(src= "aggie_logo.jpg",height=75,width=75,align="right"),
+                h3("Instructions",align="center"),
                 strong("For City Stats:"),
                 p("Just pick a local city! The 'City' tab wil give you some quick stats."),
                 br(),
@@ -32,7 +35,7 @@ ui <- fluidPage(
                             choices = list("American","Breakfast","Chinese","Mexican"),
                             selected="Breakfast"),
                 checkboxGroupInput("price",label="What's your budget",
-                                   choices = list("$"=1,"$$"=2,"$$$"=3,"$$$$"=4),selected=1),width = 2),
+                                   choices = list("$"=1,"$$"=2,"$$$"=3,"$$$$"=4),selected=1),width = 3),
                 
   
   mainPanel(
@@ -71,8 +74,8 @@ ui <- fluidPage(
                column(4,
                  h4("maps",align="right"),
                  leafletOutput("restMap",height=400,width=350))
-      ),
-    position = "left"),
+      )
+    ),
     
     
     
