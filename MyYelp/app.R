@@ -10,65 +10,65 @@ library(DT)
 
 ui <- fluidPage(
   titlePanel(h2("Aggie YelperHelper!",align="center")
-             ),
+  ),
   
-  sidebarPanel(img(src = "yelp_fusion.png", height = 75, width =200),
-               img(src= "aggie_logo.jpg",height=75,width=75,align="right"),
-                h3("Instructions",align="center"),
-                strong("For City Stats:"),
-                p("Just pick a local city! The 'City' tab wil give you some quick stats."),
-                br(),
-                strong("For a specific restaurant:"),
-                p("Select a local city and category. Then head over to the restaurant tab."),
-                br(),
-                br(),
-                selectInput("cities",
-                            label="Choose a city to look in.",
-                            choices = list("Davis",
-                                           "Dixon",
-                                           "Sacramento",
-                                           "Woodland"),
-                            selected = "Davis"),
-                #this section will be pulled from cats in API
-                selectInput("category",
-                            label="What kind of food did you want?",
-                            choices = list("American","Breakfast","Chinese","None"=NULL),
-                            selected="None")
+  sidebarPanel(img(src = "https://s3-media3.fl.yelpcdn.com/assets/srv0/developer_pages/b2ca299e2633/assets/img/318x90_yelp_fusion.png", height = 75, width =200),
+               img(src= "https://rlv.zcache.com/uc_davis_aggies_poster-r572efe85d8b34d16969c4d2549da6c22_wvk_8byvr_540.jpg",height=75,width=75,align="right"),
+               h3("Instructions",align="center"),
+               strong("For City Stats:"),
+               p("Just pick a local city! The 'City' tab wil give you some quick stats."),
+               br(),
+               strong("For a specific restaurant:"),
+               p("Select a local city and category. Then head over to the restaurant tab."),
+               br(),
+               br(),
+               selectInput("cities",
+                           label="Choose a city to look in.",
+                           choices = list("Davis",
+                                          "Dixon",
+                                          "Sacramento",
+                                          "Woodland"),
+                           selected = "Davis"),
+               #this section will be pulled from cats in API
+               selectInput("category",
+                           label="What kind of food did you want?",
+                           choices = list("American","Breakfast","Chinese","None"=NULL),
+                           selected="None")
                ,width = 3),
-                
+  
   
   mainPanel(
     tabsetPanel(
       tabPanel("City Stats",
                
-       column(4, 
-              h4("Rating Overview",align="left"),
-              plotOutput("hist")
-             
-              ),
-       column(4,
-              h4("Quick Stats",align="left"),
-              textOutput("avgR"),
-              tableOutput("avgrate"),
-              textOutput("pcnt"),
-              tableOutput("price")),
-       column(4,
-              h4("maps",align="left"),
-              leafletOutput("cityMap",height=500,width=400))
-        
-              
-             ),
+               column(4, 
+                      h4("Rating Overview",align="left"),
+                      plotOutput("hist")
+                      
+               ),
+               column(4,
+                      h4("Quick Stats",align="left"),
+                      textOutput("avgR"),
+                      tableOutput("avgrate"),
+                      textOutput("pcnt"),
+                      tableOutput("price")),
+               column(4,
+                      h4("maps",align="left"),
+                      leafletOutput("cityMap",height=500,width=400))
                
-                 
                
+      ),
+      
+      
+      
       tabPanel("Restaurant Stats",
                column(4,
-                      h4("Info",align="Left"),
+                      h4("Restaurant Info",align="Left"),
                       dataTableOutput("info")
-                      ),
+               ),
                column(4,offset=4,
-                 h4("maps",align="right"),
-                 leafletOutput("restMap",height=400,width=350))
+                      h4("maps",align="right"),
+                      leafletOutput("restMap",height=400,width=350))
       )
     ),
     
@@ -84,11 +84,11 @@ ui <- fluidPage(
 
 # Define server logic ---------------------------------------------------------------------------
 server <- function(input, output,session) {
- 
-
+  
+  
   rest = reactive({yp <- GET(
     "https://api.yelp.com/v3/businesses/search",
-    add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELp"))),
+    add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
     query = list(
       term="Restaurant",
       location = paste(input$cities, ", CA"), 
@@ -102,38 +102,37 @@ server <- function(input, output,session) {
   
   #change to yp for all 4 cities and then filter based on user input//will be reactive I think
   fromJSON(json)$business %>% 
-    select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
+    select(id, name, image_url,url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
     unnest(categories) %>% 
     mutate(lat = coordinates$lat,lon = coordinates$lon) %>% 
     mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n"),city=as.character(location$city)) %>% 
-    select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
+    mutate(link = paste0("<a href='",url,"'>",name,"</a>")) %>% 
+    mutate(pic = paste("<img src=",image_url,"height='150'></img>")) %>% 
+    #select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
     distinct(name,.keep_all = TRUE) })  
-
   
-  output$selected_var <- renderText({ 
-    paste("You have selected", input$cities)
-  })           
-
+  
+             
+  
   ###want to change to ggplot 
-   output$hist <- renderPlot({
-     
-     x = input$cities
-     
-     updateSelectInput(session,"category",
-                       label = paste("What kind of food did you want?"),
-                       choices = unique(rest()$title),
-                       selected = head(unique(rest()$title),1))
-     
-     
-     hist(rest()$rating,main="Ratings") 
-     
-     #not the same data as below//add second arg main=isolate(input$title) makes the title variable non-reactive
+  output$hist <- renderPlot({
+    
+    x = input$cities
+    
+    updateSelectInput(session,"category",
+                      label = paste("What kind of food did you want?"),
+                      choices = unique(rest()$title),
+                      selected = head(unique(rest()$title),1))
+    
+    
+    hist(rest()$rating,main="Ratings") 
+    
     
   })
   output$price <- renderTable({
     rest() %>%  group_by(price) %>% 
-      summarise(n()) %>% na.omit()
-      #not the same data as above
+      summarise(count=n()) %>% na.omit()
+    
     
   })
   
@@ -148,10 +147,14 @@ server <- function(input, output,session) {
     paste("Number of restaurants for ",input$cities,  "by price")
   })
   
-  output$info <-renderDataTable(({
-    rest() %>% filter(title==input$category,city==input$cities) %>%  select(name,title,rating,price,display_address)
+  output$info <-renderDataTable({
+    
+          return(rest() %>% select(name:pic) %>%  filter(title==input$category,city==input$cities)  %>% select(name,title,rating,price,display_address,link,pic))
       
-  }))
+    },escape=FALSE)
+    #rest() %>% filter(title==input$category,city==input$cities) %>%  select(name,title,rating,link)
+    
+  #}))
   
   output$cityMap <- renderLeaflet({
     
@@ -164,38 +167,28 @@ server <- function(input, output,session) {
                       ,rest()$display_address)
       ) %>% 
       addTiles()
-      
-      
+    
+    
   })
   
-
-
-output$restMap <- renderLeaflet({
-  
-  x = input$resta
   
   
+  output$restMap <- renderLeaflet({
+    
+    
+    df.rest <-rest() %>% filter(title==input$category,city==input$cities) %>% select(name,display_address,lat,lon,)
+    
+    leaflet(df.rest) %>% 
+      addTiles() %>% 
+      addMarkers(
+        popup = paste(df.rest$name,"<br>",
+                      df.rest$display_address)
+      ) %>% 
+      addTiles()
+    #setView(lng=-121.740517,lat=38.544907,zoom =09 )
+    
+  })
   
-  updateSelectInput(session,"resta",
-                                 label = paste("Make your choice"),
-                                 choices = unique(rest()$name))
-                                 
-                                 
-  
-  
-  df.rest <-rest() %>% filter(title==input$category,city==input$cities) %>% select(name,display_address,lat,lon,)
-  
-  leaflet(df.rest) %>% 
-    addTiles() %>% 
-    addMarkers(
-      popup = paste(df.rest$name,"<br>",
-                    df.rest$display_address)
-    ) %>% 
-    addTiles()
-  #setView(lng=-121.740517,lat=38.544907,zoom =09 )
-  
-})
-
 }
 
 # Run the app -----------------------------------------------------------------------------------
