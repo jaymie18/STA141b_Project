@@ -5,6 +5,7 @@ library(tidyverse)
 library(rvest)
 library(httr)
 library(jsonlite)
+library(DT)
 
 
 ui <- fluidPage(
@@ -18,8 +19,7 @@ ui <- fluidPage(
                 p("Just pick a local city! The 'City' tab wil give you some quick stats."),
                 br(),
                 strong("For a specific restaurant:"),
-                p("Select a local city, food category, and price below. Then choose the restaurant 
-                  you want to look at in the restaurant tab."),
+                p("Select a local city and category. Then head over to the restaurant tab."),
                 br(),
                 br(),
                 selectInput("cities",
@@ -32,10 +32,9 @@ ui <- fluidPage(
                 #this section will be pulled from cats in API
                 selectInput("category",
                             label="What kind of food did you want?",
-                            choices = list("American","Breakfast","Chinese","Mexican"),
-                            selected="Breakfast"),
-                checkboxGroupInput("price",label="What's your budget",
-                                   choices = list("$"=1,"$$"=2,"$$$"=3,"$$$$"=4),selected=1),width = 3),
+                            choices = list("American","Breakfast","Chinese","None"=NULL),
+                            selected="None")
+               ,width = 3),
                 
   
   mainPanel(
@@ -45,6 +44,7 @@ ui <- fluidPage(
        column(4, 
               h4("Rating Overview",align="left"),
               plotOutput("hist")
+             
               ),
        column(4,
               h4("Quick Stats",align="left"),
@@ -63,15 +63,10 @@ ui <- fluidPage(
                
       tabPanel("Restaurant Stats",
                column(4,
-                      h4("restaurant",align="left"),
-                      selectInput("resta",
-                                  label = "Make your choice",
-                                  choices=list("Mikuni's", 
-                                               "Ali Baba",
-                                               "3rd & U Cafe"),
-                                  selected="Ali Baba")
+                      h4("Info",align="Left"),
+                      dataTableOutput("info")
                       ),
-               column(4,
+               column(4,offset=4,
                  h4("maps",align="right"),
                  leafletOutput("restMap",height=400,width=350))
       )
@@ -137,7 +132,7 @@ server <- function(input, output,session) {
   })
   output$price <- renderTable({
     rest() %>%  group_by(price) %>% 
-      summarise(n()) %>%  slice(-4) 
+      summarise(n()) %>% na.omit()
       #not the same data as above
     
   })
@@ -153,6 +148,10 @@ server <- function(input, output,session) {
     paste("Number of restaurants for ",input$cities,  "by price")
   })
   
+  output$info <-renderDataTable(({
+    rest() %>% filter(title==input$category,city==input$cities) %>%  select(name,title,rating,price,display_address)
+      
+  }))
   
   output$cityMap <- renderLeaflet({
     
@@ -173,19 +172,25 @@ server <- function(input, output,session) {
 
 output$restMap <- renderLeaflet({
   
-  x = input$cities
+  x = input$resta
+  
+  
   
   updateSelectInput(session,"resta",
                                  label = paste("Make your choice"),
-                                 choices = unique(rest()$name),
-                                 #selected = head(unique(rest()$name),1)
-                                 )
+                                 choices = unique(rest()$name))
+                                 
+                                 
   
-  df<-rest() %>% filter(name == input$resta) %>% select(name,lat,lon)
   
-  leaflet(df) %>% 
+  df.rest <-rest() %>% filter(title==input$category,city==input$cities) %>% select(name,display_address,lat,lon,)
+  
+  leaflet(df.rest) %>% 
     addTiles() %>% 
-    addMarkers() %>% 
+    addMarkers(
+      popup = paste(df.rest$name,"<br>",
+                    df.rest$display_address)
+    ) %>% 
     addTiles()
   #setView(lng=-121.740517,lat=38.544907,zoom =09 )
   
@@ -195,3 +200,5 @@ output$restMap <- renderLeaflet({
 
 # Run the app -----------------------------------------------------------------------------------
 shinyApp(ui = ui, server = server)
+
+

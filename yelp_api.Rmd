@@ -95,12 +95,15 @@ ypt<-GET(
 stop_for_status(ypt)
 
 json2<-content(ypt,as="text",encoding = "UTF-8")
-fromJSON(json2)$business %>% mutate(address=as.character(location$display_address)) %>% 
-  select(name,address,price) %>% group_by(price) %>% summarise(n())
+fromJSON(json2)$business #%>% mutate(address=as.character(location$display_address)) %>% 
+  #select(name,address,price) %>% group_by(price) %>% summarise(n())
 ```
 
 
 ```{r}
+yp_davis %>% filter(name=="Cajun Feast") %>% select(name,rating)
 
+paste("$")
+yp_davis #%>% select(name,title,rating,price,display_address,url) 
 ```
 
