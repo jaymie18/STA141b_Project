@@ -15,6 +15,9 @@ library(httr)
 library(tidyverse)
 library(rromeo)
 library(plotly)
+library(rvest)
+library(tidytext)
+library(styler)
 ```
 
 
@@ -23,36 +26,34 @@ yp <- GET(
   "https://api.yelp.com/v3/businesses/search",
   add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
   query = list(
-    term="Restaurant",
-    location = "Davis, CA 95618", 
-    limit=50
-    
-
+    term = "Restaurant",
+    location = "Davis, CA 95618",
+    limit = 50
   )
 )
 stop_for_status(yp)
-json <- content(yp, as = "text",encoding="UTF-8")
+json <- content(yp, as = "text", encoding = "UTF-8")
 
 fromJSON(json)$business %>% select(coordinates)
 
-rateme<-fromJSON(json)$business %>% select(id,name,rating)
+rateme <- fromJSON(json)$business %>% select(id, name, rating)
 
-rateme %>% 
-  group_by(rating) %>% 
-  plot_ly(x=~rating,type='histogram',color=~factor(rating))
+rateme %>%
+  group_by(rating) %>%
+  plot_ly(x = ~rating, type = "histogram", color = ~ factor(rating))
 ```
 
 ```{r}
-rateme %>% 
+rateme %>%
   arrange(desc(rating))
 ```
 
 ```{r}
-yp_rev<-GET(
+yp_rev <- GET(
   "https://api.yelp.com/v3/businesses/iLNnJRb7zgms4flTf9qteg/reviews",
-   add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))))
+  add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP")))
+)
 stop_for_status(yp_rev)
-
 ```
 
 ```{r}
@@ -60,50 +61,88 @@ usethis::edit_r_environ()
 ```
 
 ```{r}
-yp_davis<-fromJSON(json)$business %>% 
- 
-  select(id, name, image_url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
-  unnest(categories) %>% 
-  mutate(lat = coordinates$lat,lon = coordinates$lon) %>% 
-  mutate( display_address = as.character(location$display_address),city=as.character(location$city)) %>% 
-  select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
-   distinct(name,.keep_all = TRUE) 
-  
+yp_davis <- fromJSON(json)$business %>%
+  select(url, id, name, image_url, review_count, categories, rating, coordinates, price, location, display_phone, transactions) %>%
+  unnest(categories) %>%
+  mutate(lat = coordinates$lat, lon = coordinates$lon) %>%
+  mutate(display_address = as.character(location$display_address), city = as.character(location$city)) %>%
+  select(name, title, rating, price, display_phone, lat, lon, display_address, city) %>%
+  distinct(name, .keep_all = TRUE)
 
 
-yp_davis %>%  distinct(name,.keep_all = TRUE)
-  
-      
+
+
+yp_davis
 ?filter
 yp_davis
 ```
 
 ```{r}
-ipc<-"Woodland"
-ipc_glu<-str_glue(ipc,", CA")
+ipc <- "Dixon"
+ipc_glu <- str_glue(ipc, ", CA")
 
 ipc_glu
 
-ypt<-GET(
+ypt <- GET(
   "https://api.yelp.com/v3/businesses/search",
   add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
   query = list(
-    term="Restaurant",
-    location = str_glue(ipc,", CA"), 
-    limit=50 
-  ))  
+    term = "Restaurant",
+    location = str_glue(ipc, ", CA"),
+    limit = 50
+  )
+)
 stop_for_status(ypt)
 
-json2<-content(ypt,as="text",encoding = "UTF-8")
-fromJSON(json2)$business #%>% mutate(address=as.character(location$display_address)) %>% 
-  #select(name,address,price) %>% group_by(price) %>% summarise(n())
+json2 <- content(ypt, as = "text", encoding = "UTF-8")
+fromJSON(json2)$business # %>% mutate(address=as.character(location$display_address)) %>%
+# select(name,address,price) %>% group_by(price) %>% summarise(n())
 ```
 
 
 ```{r}
-yp_davis %>% filter(name=="Cajun Feast") %>% select(name,rating)
+yp_davis %>%
+  filter(name == "Cajun Feast") %>%
+  select(name, rating)
 
 paste("$")
-yp_davis #%>% select(name,title,rating,price,display_address,url) 
+yp_davis # %>% select(name,title,rating,price,display_address,url)
+```
+
+```{r}
+library(wordcloud)
+yp_url <- fromJSON(json)$business$url[1]
+
+yelp_cont <- read_html(yp_url) %>%
+  html_nodes("div") %>%
+  html_nodes("p") %>%
+  html_text() %>%
+  str_remove_all("\\n") %>%
+  str_remove_all("\\d+") %>%
+  tibble(text = .)
+
+yelp_cont
+
+yelp_cont %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  group_by(word) %>%
+  count(word, sort = TRUE) %>%
+  with(wordcloud(
+    word, n,
+    min.freq = 10, random.order = FALSE,
+    colors = brewer.pal(8, "Dark2")
+  ))
+```
+
+```{r}
+###what did i want to do??????
+
+unique(yp_davis %>% select(title))
+```
+
+```{r}
+#Random selector
+yp_davis %>% select(name) %>% slice(round(runif(1,1,50)))
 ```
 
