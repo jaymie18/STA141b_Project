@@ -31,12 +31,18 @@ ui <- fluidPage(
       ),
       selected = "Davis"
     ),
-    
+
     selectInput("category",
       label = "What kind of food did you want?",
       choices = list("American", "Breakfast", "Chinese"),
-      selected = "None"
+      selected = "None",
+      
     ),
+    br(),
+    actionButton("lucky", "Let Us Pick!"),
+    br(),
+    br(),
+    textOutput("rand"),
     width = 3
   ),
 
@@ -49,15 +55,17 @@ ui <- fluidPage(
         column(
           4,
           h4("Rating Overview", align = "left"),
-          plotOutput("hist")
-        ),
-        column(
-          4,
-          h4("Quick Stats", align = "left"),
+          plotOutput("hist"),
           textOutput("avgR"),
           tableOutput("avgrate"),
           textOutput("pcnt"),
           tableOutput("price")
+        ),
+        column(
+          4,
+          h4("Quick Stats", align = "left"),
+          textOutput("Categories"),
+          dataTableOutput("cat.sum")
         ),
         column(
           3,
@@ -76,16 +84,12 @@ ui <- fluidPage(
           dataTableOutput("info")
         ),
         column(4,
-          offset =4 ,
+          offset = 4,
           h4("maps", align = "left"),
-          leafletOutput("restMap", height = 300, width = 250)
+          leafletOutput("restMap", height = 350, width = 350)
         )
       )
     ),
-
-
-
-    
     width = 9
   )
 )
@@ -116,7 +120,6 @@ server <- function(input, output, session) {
       mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n"), city = as.character(location$city)) %>%
       mutate(link = paste0("<a href='", url, "'>", name, "</a>")) %>%
       mutate(pic = paste("<img src=", image_url, "height='125'></img>")) %>%
-      # select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
       distinct(name, .keep_all = TRUE)
   })
 
@@ -126,12 +129,13 @@ server <- function(input, output, session) {
   ### want to change to ggplot
   output$hist <- renderPlot({
     x <- input$cities
-
-    updateSelectInput(session, "category",
-      label = paste("What kind of food did you want?"),
-      choices = unique(rest()$title),
-      selected = head(unique(rest()$title), 1)
-    )
+    
+    observeEvent(input$cities,{updateSelectInput(session, "category",
+                                                 label = paste("What kind of food did you want?"),
+                                                 choices = unique(rest()$title),
+                                                 selected = head(unique(rest()$title), 1)
+    )})
+    
 
 
     hist(rest()$rating, main = "Ratings")
@@ -154,13 +158,23 @@ server <- function(input, output, session) {
     paste("Number of restaurants for ", input$cities, "by price")
   })
 
+  output$cat.sum <- renderDataTable(
+    {
+      rest() %>%
+        group_by(title) %>%
+        summarise(Cater = n()) %>%
+        na.omit()
+    },
+    options = list(searching = FALSE, pageLength = 5)
+  )
+
   output$info <- renderDataTable(
     {
       return(rest() %>% select(name:pic) %>% filter(title == input$category, city == input$cities)
         %>% select(name, rating, price, display_address, link, pic))
     },
     escape = FALSE,
-    options = list(searching = FALSE, paging = FALSE)
+    options = list(searching = FALSE, pageLength= 4)
   )
 
 
@@ -195,9 +209,26 @@ server <- function(input, output, session) {
         )
       ) %>%
       addTiles()
-    
   })
-}
+  
+  observeEvent(input$lucky,{
+    output$rand <- renderText({paste("You got ",
+                                     rest() %>% select(name) %>% 
+                                       slice(round(runif(1,1,50))), 
+                                     "as your restaurant!")})
+  })
+  
+  # output$rand <- renderText({
+  #   input$lucky
+  #   isolate({paste("You got ",
+  #                  rest() %>% select(name) %>% 
+  #                  slice(round(runif(1,1,50))), 
+  #                  "as your restaurant!")
+  #  })
+     
+  #})
+
+  }
 
 # Run the app -----------------------------------------------------------------------------------
 shinyApp(ui = ui, server = server)
