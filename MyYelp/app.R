@@ -9,189 +9,195 @@ library(DT)
 
 
 ui <- fluidPage(
-  titlePanel(h2("Aggie YelperHelper!",align="center")
-  ),
-  
-  sidebarPanel(img(src = "https://s3-media3.fl.yelpcdn.com/assets/srv0/developer_pages/b2ca299e2633/assets/img/318x90_yelp_fusion.png", height = 75, width =200),
-               img(src= "https://rlv.zcache.com/uc_davis_aggies_poster-r572efe85d8b34d16969c4d2549da6c22_wvk_8byvr_540.jpg",height=75,width=75,align="right"),
-               h3("Instructions",align="center"),
-               strong("For City Stats:"),
-               p("Just pick a local city! The 'City' tab wil give you some quick stats."),
-               br(),
-               strong("For a specific restaurant:"),
-               p("Select a local city and category. Then head over to the restaurant tab."),
-               br(),
-               br(),
-               selectInput("cities",
-                           label="Choose a city to look in.",
-                           choices = list("Davis",
-                                          "Dixon",
-                                          "Sacramento",
-                                          "Woodland"),
-                           selected = "Davis"),
-               #this section will be pulled from cats in API
-               selectInput("category",
-                           label="What kind of food did you want?",
-                           choices = list("American","Breakfast","Chinese","None"=NULL),
-                           selected="None")
-               ,width = 3),
-  
-  
-  mainPanel(
-    tabsetPanel(
-      tabPanel("City Stats",
-               
-               column(4, 
-                      h4("Rating Overview",align="left"),
-                      plotOutput("hist")
-                      
-               ),
-               column(4,
-                      h4("Quick Stats",align="left"),
-                      textOutput("avgR"),
-                      tableOutput("avgrate"),
-                      textOutput("pcnt"),
-                      tableOutput("price")),
-               column(4,
-                      h4("maps",align="left"),
-                      leafletOutput("cityMap",height=500,width=400))
-               
-               
+  titlePanel(h2("Aggie YelperHelper!", align = "center")),
+
+  sidebarPanel(img(src = "https://s3-media3.fl.yelpcdn.com/assets/srv0/developer_pages/b2ca299e2633/assets/img/318x90_yelp_fusion.png", height = 75, width = 200),
+    img(src = "https://rlv.zcache.com/uc_davis_aggies_poster-r572efe85d8b34d16969c4d2549da6c22_wvk_8byvr_540.jpg", height = 75, width = 75, align = "right"),
+    h3("Instructions", align = "center"),
+    strong("For City Stats:"),
+    p("Just pick a local city! The 'City' tab wil give you some quick stats."),
+    br(),
+    strong("For a specific restaurant:"),
+    p("Select a local city and category. Then head over to the restaurant tab."),
+    br(),
+    br(),
+    selectInput("cities",
+      label = "Choose a city to look in.",
+      choices = list(
+        "Davis",
+        "Dixon",
+        "Sacramento",
+        "Woodland"
       ),
-      
-      
-      
-      tabPanel("Restaurant Stats",
-               column(4,
-                      h4("Restaurant Info",align="Left"),
-                      dataTableOutput("info")
-               ),
-               column(4,offset=4,
-                      h4("maps",align="right"),
-                      leafletOutput("restMap",height=400,width=350))
-      )
+      selected = "Davis"
     ),
     
+    selectInput("category",
+      label = "What kind of food did you want?",
+      choices = list("American", "Breakfast", "Chinese"),
+      selected = "None"
+    ),
+    width = 3
+  ),
+
+
+  mainPanel(
+    tabsetPanel(
+      tabPanel(
+        "City Stats",
+
+        column(
+          4,
+          h4("Rating Overview", align = "left"),
+          plotOutput("hist")
+        ),
+        column(
+          4,
+          h4("Quick Stats", align = "left"),
+          textOutput("avgR"),
+          tableOutput("avgrate"),
+          textOutput("pcnt"),
+          tableOutput("price")
+        ),
+        column(
+          3,
+          h4("maps", align = "left"),
+          leafletOutput("cityMap", height = 450, width = 350)
+        )
+      ),
+
+
+
+      tabPanel(
+        "Restaurant Stats",
+        column(
+          4,
+          h4("Restaurant Info", align = "Left"),
+          dataTableOutput("info")
+        ),
+        column(4,
+          offset =4 ,
+          h4("maps", align = "left"),
+          leafletOutput("restMap", height = 300, width = 250)
+        )
+      )
+    ),
+
+
+
     
-    
-    # h1("Introducing Shiny"),
-    
-    width=8)
+    width = 9
+  )
 )
 
 
 
 
 # Define server logic ---------------------------------------------------------------------------
-server <- function(input, output,session) {
-  
-  
-  rest = reactive({yp <- GET(
-    "https://api.yelp.com/v3/businesses/search",
-    add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
-    query = list(
-      term="Restaurant",
-      location = paste(input$cities, ", CA"), 
-      limit=50
-      
-      
+server <- function(input, output, session) {
+  rest <- reactive({
+    yp <- GET(
+      "https://api.yelp.com/v3/businesses/search",
+      add_headers(Authorization = paste("Bearer", Sys.getenv("MY_YELP"))),
+      query = list(
+        term = "Restaurant",
+        location = paste(input$cities, ", CA"),
+        limit = 50
+      )
     )
-  )
-  stop_for_status(yp)
-  json <- content(yp, as = "text",encoding="UTF-8")
-  
-  #change to yp for all 4 cities and then filter based on user input//will be reactive I think
-  fromJSON(json)$business %>% 
-    select(id, name, image_url,url,review_count,categories,rating,coordinates,price,location,display_phone, transactions) %>% 
-    unnest(categories) %>% 
-    mutate(lat = coordinates$lat,lon = coordinates$lon) %>% 
-    mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n"),city=as.character(location$city)) %>% 
-    mutate(link = paste0("<a href='",url,"'>",name,"</a>")) %>% 
-    mutate(pic = paste("<img src=",image_url,"height='150'></img>")) %>% 
-    #select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
-    distinct(name,.keep_all = TRUE) })  
-  
-  
-             
-  
-  ###want to change to ggplot 
+    stop_for_status(yp)
+    json <- content(yp, as = "text", encoding = "UTF-8")
+
+    # change to yp for all 4 cities and then filter based on user input//will be reactive I think
+    fromJSON(json)$business %>%
+      select(id, name, image_url, url, review_count, categories, rating, coordinates, price, location, display_phone, transactions) %>%
+      unnest(categories) %>%
+      mutate(lat = coordinates$lat, lon = coordinates$lon) %>%
+      mutate(display_address = location$display_address %>% map_chr(str_c, collapse = "\n"), city = as.character(location$city)) %>%
+      mutate(link = paste0("<a href='", url, "'>", name, "</a>")) %>%
+      mutate(pic = paste("<img src=", image_url, "height='125'></img>")) %>%
+      # select(name,title,rating,price,display_phone,lat,lon,display_address,city) %>%
+      distinct(name, .keep_all = TRUE)
+  })
+
+
+
+
+  ### want to change to ggplot
   output$hist <- renderPlot({
-    
-    x = input$cities
-    
-    updateSelectInput(session,"category",
-                      label = paste("What kind of food did you want?"),
-                      choices = unique(rest()$title),
-                      selected = head(unique(rest()$title),1))
-    
-    
-    hist(rest()$rating,main="Ratings") 
-    
-    
+    x <- input$cities
+
+    updateSelectInput(session, "category",
+      label = paste("What kind of food did you want?"),
+      choices = unique(rest()$title),
+      selected = head(unique(rest()$title), 1)
+    )
+
+
+    hist(rest()$rating, main = "Ratings")
   })
   output$price <- renderTable({
-    rest() %>%  group_by(price) %>% 
-      summarise(count=n()) %>% na.omit()
-    
-    
+    rest() %>%
+      group_by(price) %>%
+      summarise(count = n()) %>%
+      na.omit()
   })
-  
-  output$avgR<-renderText({
-    paste("Avg number of stars for ",input$cities)
+
+  output$avgR <- renderText({
+    paste("Avg number of stars for ", input$cities)
   })
-  
-  output$avgrate <-renderTable({
-    rest() %>% summarise(Avg=mean(rating))
+
+  output$avgrate <- renderTable({
+    rest() %>% summarise(Avg = mean(rating))
   })
-  output$pcnt<-renderText({
-    paste("Number of restaurants for ",input$cities,  "by price")
+  output$pcnt <- renderText({
+    paste("Number of restaurants for ", input$cities, "by price")
   })
-  
-  output$info <-renderDataTable({
-    
-          return(rest() %>% select(name:pic) %>%  filter(title==input$category,city==input$cities)  %>% select(name,title,rating,price,display_address,link,pic))
-      
-    },escape=FALSE)
-    #rest() %>% filter(title==input$category,city==input$cities) %>%  select(name,title,rating,link)
-    
-  #}))
-  
+
+  output$info <- renderDataTable(
+    {
+      return(rest() %>% select(name:pic) %>% filter(title == input$category, city == input$cities)
+        %>% select(name, rating, price, display_address, link, pic))
+    },
+    escape = FALSE,
+    options = list(searching = FALSE, paging = FALSE)
+  )
+
+
+
   output$cityMap <- renderLeaflet({
-    
-    df.map<-rest() %>% select(name,lat,lon)
-    
-    leaflet(df.map) %>% 
-      addTiles() %>% 
+    df.map <- rest() %>% select(name, lat, lon)
+
+    leaflet(df.map) %>%
+      addTiles() %>%
       addMarkers(
-        popup = paste(rest()$name,"<br>"
-                      ,rest()$display_address)
-      ) %>% 
+        popup = paste(
+          rest()$name, "<br>",
+          rest()$display_address
+        )
+      ) %>%
       addTiles()
-    
-    
   })
-  
-  
-  
+
+
+
   output$restMap <- renderLeaflet({
-    
-    
-    df.rest <-rest() %>% filter(title==input$category,city==input$cities) %>% select(name,display_address,lat,lon,)
-    
-    leaflet(df.rest) %>% 
-      addTiles() %>% 
+    df.rest <- rest() %>%
+      filter(title == input$category, city == input$cities) %>%
+      select(name, display_address, lat, lon)
+
+    leaflet(df.rest) %>%
+      addTiles() %>%
       addMarkers(
-        popup = paste(df.rest$name,"<br>",
-                      df.rest$display_address)
-      ) %>% 
+        popup = paste(
+          df.rest$name, "<br>",
+          df.rest$display_address
+        )
+      ) %>%
       addTiles()
-    #setView(lng=-121.740517,lat=38.544907,zoom =09 )
     
   })
-  
 }
 
 # Run the app -----------------------------------------------------------------------------------
 shinyApp(ui = ui, server = server)
-
-
